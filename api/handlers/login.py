@@ -24,8 +24,7 @@ def verify_password(password: str, stored_password: str) -> bool:
         except Exception:
             return False
 
-    # Keep legacy plaintext comparison for existing fixtures/data.
-    return hmac.compare_digest(stored_password, password)
+    return False
 
 class LoginHandler(BaseHandler):
     async def generate_token(self, email):
