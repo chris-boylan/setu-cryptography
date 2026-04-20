@@ -1,9 +1,7 @@
 from datetime import datetime, timezone
-
 from .base import BaseHandler
 
 class AuthHandler(BaseHandler):
-
     async def prepare(self):
         super(AuthHandler, self).prepare()
 

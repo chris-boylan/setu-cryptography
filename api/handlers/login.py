@@ -1,11 +1,33 @@
+import base64
 from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
 from tornado.escape import json_decode
 from uuid import uuid4
-
 from .base import BaseHandler
 
-class LoginHandler(BaseHandler):
 
+def verify_password(password: str, stored_password: str) -> bool:
+    if not isinstance(stored_password, str):
+        return False
+
+    parts = stored_password.split('$')
+    if len(parts) == 4 and parts[0] == 'pbkdf2_sha256':
+        try:
+            iterations = int(parts[1])
+            salt = base64.b64decode(parts[2])
+            expected_hash = base64.b64decode(parts[3])
+            derived_hash = hashlib.pbkdf2_hmac(
+                'sha256', password.encode('utf-8'), salt, iterations, dklen=len(expected_hash)
+            )
+            return hmac.compare_digest(derived_hash, expected_hash)
+        except Exception:
+            return False
+
+    # Keep legacy plaintext comparison for existing fixtures/data.
+    return hmac.compare_digest(stored_password, password)
+
+class LoginHandler(BaseHandler):
     async def generate_token(self, email):
         token_uuid = uuid4().hex
         expires_in = (datetime.now(timezone.utc) + timedelta(hours=2)).timestamp()
@@ -40,6 +62,10 @@ class LoginHandler(BaseHandler):
             self.send_error(400, message='The password is invalid!')
             return
 
+        if not isinstance(password, str):
+            self.send_error(400, message='The password is invalid!')
+            return
+
         user = await self.db.users.find_one({
           'email': email
         }, {
@@ -50,7 +76,7 @@ class LoginHandler(BaseHandler):
             self.send_error(403, message='The email address and password are invalid!')
             return
 
-        if user['password'] != password:
+        if not verify_password(password, user.get('password')):
             self.send_error(403, message='The email address and password are invalid!')
             return
 
