@@ -1,4 +1,3 @@
-from json import dumps
 from tornado.escape import json_decode
 from tornado.httputil import HTTPHeaders
 from tornado.ioloop import IOLoop
