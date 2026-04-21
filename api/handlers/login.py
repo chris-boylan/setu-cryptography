@@ -26,23 +26,30 @@ def verify_password(password: str, stored_password: str) -> bool:
 
     return False
 
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
 class LoginHandler(BaseHandler):
     async def generate_token(self, email):
         token_uuid = uuid4().hex
+        token_hash = hash_token(token_uuid)
         expires_in = (datetime.now(timezone.utc) + timedelta(hours=2)).timestamp()
-
-        token = {
-            'token': token_uuid,
-            'expiresIn': expires_in,
-        }
 
         await self.db.users.update_one({
             'email': email
         }, {
-            '$set': token
+            '$set': {
+                'tokenHash': token_hash,
+                'expiresIn': expires_in,
+            }
         })
 
-        return token
+        return {
+            'token': token_uuid,
+            'expiresIn': expires_in,
+        }
+
 
     async def post(self):
         try:

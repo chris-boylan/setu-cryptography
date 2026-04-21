@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import hashlib
 from .base import BaseHandler
 
 class AuthHandler(BaseHandler):
@@ -17,8 +18,10 @@ class AuthHandler(BaseHandler):
             self.send_error(400, message='You must provide a token!')
             return
 
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+
         user = await self.db.users.find_one({
-            'token': token
+            'tokenHash': token_hash
         }, {
             'email': 1,
             'displayName': 1,
