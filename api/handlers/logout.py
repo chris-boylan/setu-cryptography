@@ -10,7 +10,7 @@ class LogoutHandler(AuthHandler):
             'email': self.current_user['email'],
         }, {
             '$set': {
-                'token': None
+                'tokenHash': None
             }
         })
 
