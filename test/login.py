@@ -5,7 +5,7 @@ from tornado.web import Application
 
 from .base import BaseTest
 
-from api.handlers.login import LoginHandler
+from api.handlers.login import LoginHandler, hash_token
 from api.handlers.registration import hash_password
 
 class LoginHandlerTest(BaseTest):
@@ -29,6 +29,15 @@ class LoginHandlerTest(BaseTest):
 
         IOLoop.current().run_sync(self.register)
 
+    async def get_user(self):
+        return await self.get_app().db.users.find_one({
+            'email': self.email
+        }, {
+            'tokenHash': 1,
+            'token': 1,
+            'expiresIn': 1,
+        })
+
     def test_login(self):
         body = {
           'email': self.email,
@@ -41,6 +50,11 @@ class LoginHandlerTest(BaseTest):
         body_2 = json_decode(response.body)
         self.assertIsNotNone(body_2['token'])
         self.assertIsNotNone(body_2['expiresIn'])
+
+        user = IOLoop.current().run_sync(self.get_user)
+        self.assertEqual(hash_token(body_2['token']), user['tokenHash'])
+        self.assertIsNone(user.get('token'))
+        self.assertEqual(body_2['expiresIn'], user['expiresIn'])
 
     def test_login_case_insensitive(self):
         body = {

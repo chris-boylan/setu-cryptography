@@ -5,6 +5,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import Application
 
 from api.handlers.logout import LogoutHandler
+from api.handlers.login import hash_token
 
 from .base import BaseTest
 
@@ -26,7 +27,7 @@ class LogoutHandlerTest(BaseTest):
         await self.get_app().db.users.update_one({
             'email': self.email
         }, {
-            '$set': { 'token': self.token, 'expiresIn': 2147483647 }
+            '$set': { 'tokenHash': hash_token(self.token), 'expiresIn': 2147483647 }
         })
 
     def setUp(self):
@@ -56,8 +57,8 @@ class LogoutHandlerTest(BaseTest):
         headers = HTTPHeaders({'X-Token': 'wrongToken'})
         body = {}
 
-        response = self.fetch('/logout', method='POST', body=dumps(body))
-        self.assertEqual(400, response.code)
+        response = self.fetch('/logout', headers=headers, method='POST', body=dumps(body))
+        self.assertEqual(403, response.code)
 
     def test_logout_twice(self):
         headers = HTTPHeaders({'X-Token': self.token})
