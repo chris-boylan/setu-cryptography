@@ -32,7 +32,8 @@ class BaseHandler(RequestHandler):
                 kwargs['message'] = 'Invalid HTTP method.'
             else:
                 kwargs['message'] = 'Unknown error.'
-        self.response = kwargs
+        # Keep only values that can be returned as JSON.
+        self.response = {k: v for k, v in kwargs.items() if isinstance(v, (str, int, float, bool, type(None)))}
         self.write_json()
 
     def write_json(self):
@@ -42,4 +43,3 @@ class BaseHandler(RequestHandler):
     def options(self):
         self.set_status(204)
         self.finish()
-
