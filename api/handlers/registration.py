@@ -1,19 +1,12 @@
-import base64
-import hashlib
-import os
-
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError
 from tornado.escape import json_decode
 from .base import BaseHandler
 
-# Helper function to hash passwords using PBKDF2 with SHA-256, 600,000 iterations and a random salt
-def hash_password(password: str) -> str:
-    iterations = 600000
-    salt = os.urandom(16)
-    derived_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iterations, dklen=32)
+_ph = PasswordHasher(memory_cost=65536, time_cost=3, parallelism=4)
 
-    salt_b64 = base64.b64encode(salt).decode('ascii')
-    hash_b64 = base64.b64encode(derived_key).decode('ascii')
-    return f'pbkdf2_sha256${iterations}${salt_b64}${hash_b64}'
+def hash_password(password: str) -> str:
+    return _ph.hash(password)
 
 class RegistrationHandler(BaseHandler):
     async def post(self):

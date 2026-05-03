@@ -1,30 +1,26 @@
 import base64
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from tornado.escape import json_decode
 from uuid import uuid4
 from .base import BaseHandler
 
+# Initialize Argon2 hasher (same config as registration)
+_ph = PasswordHasher(memory_cost=65536, time_cost=3, parallelism=4)
+
 
 def verify_password(password: str, stored_password: str) -> bool:
+    """Verify password against Argon2 hash using constant-time comparison."""
     if not isinstance(stored_password, str):
         return False
 
-    parts = stored_password.split('$')
-    if len(parts) == 4 and parts[0] == 'pbkdf2_sha256':
-        try:
-            iterations = int(parts[1])
-            salt = base64.b64decode(parts[2])
-            expected_hash = base64.b64decode(parts[3])
-            derived_hash = hashlib.pbkdf2_hmac(
-                'sha256', password.encode('utf-8'), salt, iterations, dklen=len(expected_hash)
-            )
-            return hmac.compare_digest(derived_hash, expected_hash)
-        except Exception:
-            return False
-
-    return False
+    try:
+        _ph.verify(stored_password, password)
+        return True
+    except (VerifyMismatchError, InvalidHashError):
+        return False
 
 
 def hash_token(token: str) -> str:
